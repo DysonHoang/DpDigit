@@ -1,0 +1,670 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Digit DP – Quy Hoạch Động Theo Chữ Số</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Sora:wght@300;400;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0e1a;
+    --surface: #111827;
+    --surface2: #1a2235;
+    --accent: #00e5ff;
+    --accent2: #7c3aed;
+    --accent3: #f59e0b;
+    --text: #e2e8f0;
+    --muted: #64748b;
+    --green: #10b981;
+    --red: #ef4444;
+    --border: rgba(0,229,255,0.15);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Sora', sans-serif;
+    line-height: 1.7;
+    overflow-x: hidden;
+  }
+
+  /* Grid bg */
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    background-image:
+      linear-gradient(rgba(0,229,255,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,229,255,0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .container {
+    max-width: 860px;
+    margin: 0 auto;
+    padding: 0 24px 80px;
+    position: relative;
+    z-index: 1;
+  }
+
+  /* HERO */
+  .hero {
+    text-align: center;
+    padding: 80px 0 60px;
+    position: relative;
+  }
+
+  .hero-badge {
+    display: inline-block;
+    background: rgba(0,229,255,0.1);
+    border: 1px solid var(--accent);
+    color: var(--accent);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.72rem;
+    letter-spacing: 0.15em;
+    padding: 5px 14px;
+    border-radius: 999px;
+    margin-bottom: 24px;
+    animation: fadeUp 0.6s ease both;
+  }
+
+  h1 {
+    font-size: clamp(2.4rem, 6vw, 3.8rem);
+    font-weight: 700;
+    line-height: 1.1;
+    background: linear-gradient(135deg, #fff 0%, var(--accent) 60%, var(--accent2) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    animation: fadeUp 0.6s 0.1s ease both;
+  }
+
+  .hero-sub {
+    color: var(--muted);
+    font-size: 1.05rem;
+    margin-top: 16px;
+    font-weight: 300;
+    animation: fadeUp 0.6s 0.2s ease both;
+  }
+
+  /* SECTIONS */
+  .section {
+    margin-top: 56px;
+    animation: fadeUp 0.5s ease both;
+  }
+
+  .section-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.7rem;
+    letter-spacing: 0.2em;
+    color: var(--accent);
+    text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+
+  h2 {
+    font-size: 1.55rem;
+    font-weight: 700;
+    color: #fff;
+    margin-bottom: 16px;
+  }
+
+  h3 {
+    font-size: 1.15rem;
+    font-weight: 600;
+    color: var(--accent);
+    margin: 24px 0 10px;
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  p { color: #94a3b8; font-size: 0.97rem; margin-bottom: 12px; }
+  p strong { color: var(--text); }
+
+  /* CARD */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 28px 32px;
+    margin-bottom: 20px;
+    position: relative;
+    overflow: hidden;
+    transition: border-color 0.3s;
+  }
+  .card:hover { border-color: rgba(0,229,255,0.4); }
+  .card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, var(--accent2), var(--accent));
+    opacity: 0.6;
+  }
+
+  /* HIGHLIGHT BOX */
+  .highlight {
+    background: rgba(0,229,255,0.06);
+    border-left: 3px solid var(--accent);
+    border-radius: 0 12px 12px 0;
+    padding: 16px 20px;
+    margin: 16px 0;
+    font-size: 0.95rem;
+    color: #cbd5e1;
+  }
+
+  /* STATE TABLE */
+  .state-grid {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 2px;
+    margin: 20px 0;
+    border-radius: 12px;
+    overflow: hidden;
+    border: 1px solid var(--border);
+  }
+  .sg-head { background: var(--accent); color: #000; font-weight: 700; padding: 10px 16px; font-family: 'JetBrains Mono', monospace; font-size: 0.85rem; }
+  .sg-key { background: var(--surface2); padding: 10px 16px; font-family: 'JetBrains Mono', monospace; color: var(--accent3); font-size: 0.88rem; border-bottom: 1px solid rgba(255,255,255,0.04); }
+  .sg-val { background: var(--surface2); padding: 10px 16px; font-size: 0.88rem; color: #94a3b8; border-bottom: 1px solid rgba(255,255,255,0.04); }
+
+  /* CODE */
+  pre {
+    background: #060a12;
+    border: 1px solid rgba(0,229,255,0.12);
+    border-radius: 12px;
+    padding: 24px;
+    overflow-x: auto;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.83rem;
+    line-height: 1.8;
+    margin: 16px 0;
+    position: relative;
+  }
+
+  .code-label {
+    position: absolute;
+    top: 10px; right: 14px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.65rem;
+    color: var(--muted);
+    letter-spacing: 0.1em;
+  }
+
+  .kw { color: #c792ea; }
+  .fn { color: #82aaff; }
+  .cm { color: #546e7a; font-style: italic; }
+  .st { color: var(--accent3); }
+  .nm { color: #f78c6c; }
+  .op { color: var(--accent); }
+
+  /* STEPS */
+  .steps { counter-reset: step; display: flex; flex-direction: column; gap: 16px; margin: 20px 0; }
+  .step {
+    counter-increment: step;
+    display: grid;
+    grid-template-columns: 44px 1fr;
+    gap: 16px;
+    align-items: start;
+  }
+  .step-num {
+    width: 44px; height: 44px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--accent2), var(--accent));
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 700; font-size: 1rem; color: #fff;
+    flex-shrink: 0;
+  }
+  .step-body h4 { font-size: 1rem; font-weight: 600; color: #fff; margin-bottom: 4px; }
+  .step-body p { margin: 0; font-size: 0.9rem; }
+
+  /* DIGIT VIS */
+  .digit-vis {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin: 20px 0;
+    font-family: 'JetBrains Mono', monospace;
+  }
+  .digit-box {
+    width: 52px; height: 62px;
+    border: 2px solid var(--border);
+    border-radius: 10px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: #fff;
+    background: var(--surface2);
+    position: relative;
+    transition: all 0.3s;
+    cursor: default;
+  }
+  .digit-box .pos {
+    font-size: 0.55rem;
+    color: var(--muted);
+    position: absolute;
+    top: 6px;
+    letter-spacing: 0.05em;
+  }
+  .digit-box.tight { border-color: var(--accent); color: var(--accent); background: rgba(0,229,255,0.1); }
+  .digit-box.free { border-color: var(--green); color: var(--green); background: rgba(16,185,129,0.1); }
+  .digit-box.chosen { border-color: var(--accent3); color: var(--accent3); background: rgba(245,158,11,0.1); }
+  .digit-arrow { color: var(--muted); font-size: 1.2rem; }
+
+  .legend { display: flex; gap: 20px; flex-wrap: wrap; margin-top: 8px; }
+  .legend-item { display: flex; align-items: center; gap: 6px; font-size: 0.8rem; color: var(--muted); }
+  .dot { width: 10px; height: 10px; border-radius: 2px; }
+
+  /* COMPLEXITY */
+  .complexity-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 12px;
+    margin: 20px 0;
+  }
+  .c-box {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 16px;
+    text-align: center;
+  }
+  .c-box .c-val {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--accent3);
+  }
+  .c-box .c-lbl { font-size: 0.75rem; color: var(--muted); margin-top: 4px; }
+
+  /* PROBLEMS */
+  .problems {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-top: 16px;
+  }
+  .prob {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px 18px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 0.9rem;
+    transition: border-color 0.2s;
+  }
+  .prob:hover { border-color: rgba(0,229,255,0.35); }
+  .prob-icon { font-size: 1.2rem; }
+  .prob-title { font-weight: 600; color: #fff; }
+  .prob-desc { color: var(--muted); font-size: 0.82rem; }
+
+  /* ANIM */
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  /* DIVIDER */
+  .divider {
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--border), transparent);
+    margin: 48px 0;
+  }
+
+  /* NAV dots */
+  .toc {
+    position: sticky;
+    top: 24px;
+    display: none;
+  }
+
+  /* TAG */
+  .tag {
+    display: inline-block;
+    background: rgba(124,58,237,0.15);
+    border: 1px solid rgba(124,58,237,0.4);
+    color: #a78bfa;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.72rem;
+    padding: 2px 10px;
+    border-radius: 999px;
+    margin: 2px;
+  }
+
+  /* FORMULA */
+  .formula {
+    font-family: 'JetBrains Mono', monospace;
+    background: rgba(124,58,237,0.12);
+    border: 1px solid rgba(124,58,237,0.3);
+    border-radius: 8px;
+    padding: 12px 18px;
+    color: #c4b5fd;
+    font-size: 0.92rem;
+    margin: 12px 0;
+    text-align: center;
+  }
+
+  .note {
+    background: rgba(245,158,11,0.08);
+    border-left: 3px solid var(--accent3);
+    border-radius: 0 10px 10px 0;
+    padding: 12px 18px;
+    font-size: 0.88rem;
+    color: #fcd34d;
+    margin: 16px 0;
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <!-- HERO -->
+  <div class="hero">
+    <div class="hero-badge">Competitive Programming</div>
+    <h1>Digit DP</h1>
+    <p class="hero-sub">Quy Hoạch Động Theo Chữ Số — đếm số nguyên thỏa điều kiện trên từng chữ số</p>
+  </div>
+
+  <!-- 1. KHÁI NIỆM -->
+  <div class="section">
+    <div class="section-label">01 · Khái niệm</div>
+    <h2>Digit DP là gì?</h2>
+    <div class="card">
+      <p>
+        <strong>Digit DP</strong> là kỹ thuật QHĐ dùng để <strong>đếm số nguyên trong đoạn [L, R]</strong>
+        thỏa mãn một điều kiện nào đó liên quan đến <strong>từng chữ số</strong> của số đó.
+      </p>
+      <p>
+        Thay vì duyệt tuần tự từng số (O(R) → quá chậm), ta <strong>xây dựng số từng chữ số một từ trái sang phải</strong>
+        và dùng memoization để tránh tính lại các trạng thái giống nhau.
+      </p>
+      <div class="highlight">
+        💡 Bài toán kinh điển: "Đếm số nguyên trong [1, N] có tổng chữ số chia hết cho K."
+      </div>
+    </div>
+  </div>
+
+  <!-- 2. TƯ TƯỞNG -->
+  <div class="section">
+    <div class="section-label">02 · Tư tưởng cốt lõi</div>
+    <h2>Xây số từng chữ số một</h2>
+
+    <p>Cho số <strong>N = 3 2 5</strong> (3 chữ số). Ta sẽ đếm số x ≤ N thỏa điều kiện bằng cách điền từng vị trí:</p>
+
+    <div class="digit-vis">
+      <div class="digit-box tight"><span class="pos">i=0</span>3</div>
+      <div class="digit-arrow">→</div>
+      <div class="digit-box tight"><span class="pos">i=1</span>2</div>
+      <div class="digit-arrow">→</div>
+      <div class="digit-box tight"><span class="pos">i=2</span>5</div>
+    </div>
+
+    <p>Ở mỗi vị trí <code style="color:var(--accent)">i</code>, ta chọn chữ số <code style="color:var(--accent)">d</code> để điền. Cần theo dõi:</p>
+
+    <div class="state-grid">
+      <div class="sg-head">Biến</div>
+      <div class="sg-head">Ý nghĩa</div>
+      <div class="sg-key">pos</div>
+      <div class="sg-val">Đang điền vị trí thứ mấy (từ trái)</div>
+      <div class="sg-key">tight</div>
+      <div class="sg-val"><code>true</code> = các chữ số trước đã bằng N → chữ số hiện tại bị ràng buộc ≤ N[pos]</div>
+      <div class="sg-key">...state</div>
+      <div class="sg-val">Thông tin tích lũy: tổng chữ số, số mod K, số chữ số 1, v.v.</div>
+    </div>
+
+    <div class="digit-vis" style="margin-top:24px">
+      <div class="digit-box tight"><span class="pos">tight</span>3</div>
+      <span style="color:var(--muted);font-size:0.8rem;align-self:center">chọn d≤3</span>
+      <div class="digit-arrow">→</div>
+      <div class="digit-box free"><span class="pos">free</span>?</div>
+      <span style="color:var(--muted);font-size:0.8rem;align-self:center">d=0–9</span>
+      <div class="digit-arrow">→</div>
+      <div class="digit-box free"><span class="pos">free</span>?</div>
+    </div>
+    <div class="digit-vis" style="margin-top:4px">
+      <div class="digit-box tight"><span class="pos">tight</span>3</div>
+      <span style="color:var(--muted);font-size:0.8rem;align-self:center">chọn d=3</span>
+      <div class="digit-arrow">→</div>
+      <div class="digit-box tight"><span class="pos">tight</span>2</div>
+      <span style="color:var(--muted);font-size:0.8rem;align-self:center">d≤2</span>
+      <div class="digit-arrow">→</div>
+      <div class="digit-box chosen"><span class="pos">...</span>?</div>
+    </div>
+    <div class="legend">
+      <div class="legend-item"><div class="dot" style="background:var(--accent)"></div> tight (bị ràng buộc)</div>
+      <div class="legend-item"><div class="dot" style="background:var(--green)"></div> free (tự do 0–9)</div>
+      <div class="legend-item"><div class="dot" style="background:var(--accent3)"></div> đang chọn</div>
+    </div>
+  </div>
+
+  <!-- 3. CẤU TRÚC CODE -->
+  <div class="section">
+    <div class="section-label">03 · Cấu trúc chung</div>
+    <h2>Template C++</h2>
+
+    <pre><span class="cm">// Bài toán: đếm x ∈ [0, N] sao cho sum chữ số của x bằng S</span>
+
+<span class="kw">string</span> N;
+<span class="kw">int</span> dp[<span class="nm">18</span>][<span class="nm">162</span>][<span class="nm">2</span>];  <span class="cm">// dp[pos][sum][tight]</span>
+<span class="kw">bool</span> visited[<span class="nm">18</span>][<span class="nm">162</span>][<span class="nm">2</span>];
+
+<span class="kw">int</span> <span class="fn">solve</span>(<span class="kw">int</span> pos, <span class="kw">int</span> sum, <span class="kw">bool</span> tight) {
+    <span class="kw">if</span> (pos <span class="op">==</span> N.size()) {
+        <span class="kw">return</span> (sum <span class="op">==</span> S) ? <span class="nm">1</span> : <span class="nm">0</span>;  <span class="cm">// base case</span>
+    }
+    <span class="kw">if</span> (visited[pos][sum][tight])
+        <span class="kw">return</span> dp[pos][sum][tight];
+
+    visited[pos][sum][tight] <span class="op">=</span> <span class="kw">true</span>;
+    <span class="kw">int</span> limit <span class="op">=</span> tight ? (N[pos] <span class="op">-</span> <span class="st">'0'</span>) : <span class="nm">9</span>;
+    <span class="kw">int</span> res <span class="op">=</span> <span class="nm">0</span>;
+
+    <span class="kw">for</span> (<span class="kw">int</span> d <span class="op">=</span> <span class="nm">0</span>; d <span class="op">&lt;=</span> limit; d<span class="op">++</span>) {
+        <span class="cm">// tight mới = tight cũ AND d == limit</span>
+        res <span class="op">+=</span> <span class="fn">solve</span>(pos<span class="op">+</span><span class="nm">1</span>, sum<span class="op">+</span>d, tight <span class="op">&amp;&amp;</span> d<span class="op">==</span>limit);
+    }
+
+    <span class="kw">return</span> dp[pos][sum][tight] <span class="op">=</span> res;
+}
+
+<span class="cm">// Đếm x ∈ [L, R]:  count(R) - count(L-1)</span>
+<span class="kw">int</span> ans <span class="op">=</span> <span class="fn">solve</span>(<span class="nm">0</span>, <span class="nm">0</span>, <span class="kw">true</span>);
+<div class="code-label">C++17</div></pre>
+
+    <div class="note">
+      ⚠️ <strong>Trick f(R) − f(L−1):</strong> Thay vì viết hàm cho đoạn [L,R], ta viết <code>count(N)</code> = đếm số thỏa điều kiện trong [0,N], rồi trả lời = <code>count(R) − count(L−1)</code>.
+    </div>
+  </div>
+
+  <!-- 4. CÁC BƯỚC -->
+  <div class="section">
+    <div class="section-label">04 · Quy trình</div>
+    <h2>5 bước giải Digit DP</h2>
+    <div class="steps">
+      <div class="step">
+        <div class="step-num">1</div>
+        <div class="step-body">
+          <h4>Xác định trạng thái</h4>
+          <p>Tìm những thông tin cần lưu: vị trí đang xét, tình trạng tight, và các tham số bổ sung (tổng chữ số, giá trị mod K, số lần xuất hiện của chữ số nào đó…)</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">2</div>
+        <div class="step-body">
+          <h4>Viết hàm đệ quy + memo</h4>
+          <p>Hàm <code style="color:var(--accent)">solve(pos, ...state, tight)</code> trả về số lượng số hợp lệ có thể xây tiếp từ vị trí <code>pos</code> với trạng thái hiện tại.</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">3</div>
+        <div class="step-body">
+          <h4>Xử lý base case</h4>
+          <p>Khi <code>pos == len</code>: kiểm tra trạng thái tích lũy có thỏa điều kiện không → trả về 0 hoặc 1.</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">4</div>
+        <div class="step-body">
+          <h4>Duyệt chữ số d từ 0 đến limit</h4>
+          <p><code style="color:var(--accent)">limit = tight ? N[pos] : 9</code>. Với mỗi d, cập nhật state và gọi đệ quy tiếp theo với <code>new_tight = tight && (d == limit)</code>.</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">5</div>
+        <div class="step-body">
+          <h4>Áp dụng công thức count(R) − count(L−1)</h4>
+          <p>Xử lý đoạn [L, R] bằng cách gọi hàm hai lần và trừ kết quả.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 5. VÍ DỤ CỤ THỂ -->
+  <div class="section">
+    <div class="section-label">05 · Ví dụ đầy đủ</div>
+    <h2>Đếm số trong [1,N] không chứa chữ số 4</h2>
+
+    <pre><span class="kw">#include</span> <span class="st">&lt;bits/stdc++.h&gt;</span>
+<span class="kw">using namespace</span> std;
+
+<span class="kw">string</span> N;
+<span class="kw">map</span>&lt;pair&lt;<span class="kw">int</span>,<span class="kw">int</span>&gt;, <span class="kw">long long</span>&gt; memo;
+
+<span class="cm">// pos: vị trí đang xét
+// tight: có bị ràng buộc bởi N không
+// leading: có đang ở phần leading zeros không</span>
+<span class="kw">long long</span> <span class="fn">dp</span>(<span class="kw">int</span> pos, <span class="kw">bool</span> tight, <span class="kw">bool</span> leading) {
+    <span class="kw">if</span> (pos <span class="op">==</span> (<span class="kw">int</span>)N.size()) <span class="kw">return</span> <span class="nm">1</span>;
+
+    <span class="kw">auto</span> key <span class="op">=</span> make_pair(pos, tight);
+    <span class="kw">if</span> (!leading <span class="op">&amp;&amp;</span> memo.count(key)) <span class="kw">return</span> memo[key];
+
+    <span class="kw">int</span> limit <span class="op">=</span> tight ? (N[pos] <span class="op">-</span> <span class="st">'0'</span>) : <span class="nm">9</span>;
+    <span class="kw">long long</span> res <span class="op">=</span> <span class="nm">0</span>;
+
+    <span class="kw">for</span> (<span class="kw">int</span> d <span class="op">=</span> <span class="nm">0</span>; d <span class="op">&lt;=</span> limit; d<span class="op">++</span>) {
+        <span class="kw">if</span> (d <span class="op">==</span> <span class="nm">4</span>) <span class="kw">continue</span>;  <span class="cm">// bỏ qua chữ số 4</span>
+        res <span class="op">+=</span> <span class="fn">dp</span>(pos<span class="op">+</span><span class="nm">1</span>, tight <span class="op">&amp;&amp;</span> d<span class="op">==</span>limit, leading <span class="op">&amp;&amp;</span> d<span class="op">==</span><span class="nm">0</span>);
+    }
+
+    <span class="kw">if</span> (!leading) memo[key] <span class="op">=</span> res;
+    <span class="kw">return</span> res;
+}
+
+<span class="kw">int</span> <span class="fn">main</span>() {
+    cin <span class="op">&gt;&gt;</span> N;
+    <span class="cm">// Trả về count trong [0,N], trừ 1 cho số 0</span>
+    cout <span class="op">&lt;&lt;</span> <span class="fn">dp</span>(<span class="nm">0</span>, <span class="kw">true</span>, <span class="kw">true</span>) <span class="op">-</span> <span class="nm">1</span>;
+}
+<div class="code-label">C++17</div></pre>
+  </div>
+
+  <!-- 6. ĐỘ PHỨC TẠP -->
+  <div class="section">
+    <div class="section-label">06 · Phân tích</div>
+    <h2>Độ phức tạp</h2>
+    <div class="complexity-row">
+      <div class="c-box">
+        <div class="c-val">O(D)</div>
+        <div class="c-lbl">Số chữ số của N (thường ≤ 18)</div>
+      </div>
+      <div class="c-box">
+        <div class="c-val">O(D × S)</div>
+        <div class="c-lbl">Số trạng thái (D × kích thước state)</div>
+      </div>
+      <div class="c-box">
+        <div class="c-val">× 10</div>
+        <div class="c-lbl">Mỗi trạng thái xét 10 chữ số</div>
+      </div>
+    </div>
+    <p>Với N ≤ 10¹⁸ (18 chữ số), tổng số trạng thái thường rất nhỏ → Digit DP cực kỳ hiệu quả.</p>
+
+    <div class="formula">
+      Total states = D × |state_1| × |state_2| × ... × 2 (tight)
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- 7. LEADING ZEROS -->
+  <div class="section">
+    <div class="section-label">07 · Lưu ý quan trọng</div>
+    <h2>Leading Zeros</h2>
+    <div class="card">
+      <p>
+        Khi xây số "0 0 7", hai số 0 đầu là <strong>leading zeros</strong> — không phải chữ số thực sự của số 7.
+        Nhiều bài toán cần phân biệt trường hợp này (ví dụ: đếm số chữ số 0 thực sự).
+      </p>
+      <div class="highlight">
+        Giải pháp: thêm flag <code>leading_zero = true</code> khi chưa đặt chữ số khác 0 nào. Khi <code>leading_zero</code> là true, không tính vào state và không memo (vì trạng thái không ổn định).
+      </div>
+    </div>
+  </div>
+
+  <!-- 8. BÀI TẬP -->
+  <div class="section">
+    <div class="section-label">08 · Luyện tập</div>
+    <h2>Bài toán thường gặp</h2>
+    <div class="problems">
+      <div class="prob">
+        <div class="prob-icon">🔢</div>
+        <div>
+          <div class="prob-title">Tổng chữ số chia hết cho K</div>
+          <div class="prob-desc">State: <span class="tag">pos</span><span class="tag">sum % K</span><span class="tag">tight</span></div>
+        </div>
+      </div>
+      <div class="prob">
+        <div class="prob-icon">🚫</div>
+        <div>
+          <div class="prob-title">Không chứa chữ số d nào đó</div>
+          <div class="prob-desc">State: <span class="tag">pos</span><span class="tag">tight</span> — skip khi d == banned</div>
+        </div>
+      </div>
+      <div class="prob">
+        <div class="prob-icon">📊</div>
+        <div>
+          <div class="prob-title">Số chữ số tăng dần (không giảm)</div>
+          <div class="prob-desc">State: <span class="tag">pos</span><span class="tag">last_digit</span><span class="tag">tight</span></div>
+        </div>
+      </div>
+      <div class="prob">
+        <div class="prob-icon">✌️</div>
+        <div>
+          <div class="prob-title">Không có 2 chữ số liên tiếp giống nhau</div>
+          <div class="prob-desc">State: <span class="tag">pos</span><span class="tag">prev_digit</span><span class="tag">tight</span></div>
+        </div>
+      </div>
+      <div class="prob">
+        <div class="prob-icon">💰</div>
+        <div>
+          <div class="prob-title">Số "lucky" (chỉ chứa 4 và 7)</div>
+          <div class="prob-desc">State: <span class="tag">pos</span><span class="tag">tight</span> — chỉ cho d=4 hoặc d=7</div>
+        </div>
+      </div>
+      <div class="prob">
+        <div class="prob-icon">🎯</div>
+        <div>
+          <div class="prob-title">Số Winnerdigit / Balanced number</div>
+          <div class="prob-desc">State: <span class="tag">pos</span><span class="tag">tight</span><span class="tag">balance</span> — tổng chữ số vị trí lẻ = chẵn</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- FOOTER -->
+  <div style="text-align:center;margin-top:72px;padding-top:32px;border-top:1px solid var(--border)">
+    <p style="font-family:'JetBrains Mono',monospace;font-size:0.75rem;color:var(--muted)">
+      Digit DP · Competitive Programming Reference
+    </p>
+  </div>
+
+</div>
+</body>
+</html>
